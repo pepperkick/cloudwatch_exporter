@@ -3,11 +3,12 @@ package io.prometheus.cloudwatch;
 import java.util.EnumSet;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
+import org.eclipse.jetty.util.Callback;
 
-class DisallowHttpMethods implements HttpConfiguration.Customizer {
+class DisallowHttpMethods extends Handler.Wrapper {
   private final EnumSet<HttpMethod> disallowedMethods;
 
   public DisallowHttpMethods(EnumSet<HttpMethod> disallowedMethods) {
@@ -15,11 +16,12 @@ class DisallowHttpMethods implements HttpConfiguration.Customizer {
   }
 
   @Override
-  public void customize(Connector connector, HttpConfiguration channelConfig, Request request) {
+  public boolean handle(Request request, Response response, Callback callback) throws Exception {
     HttpMethod httpMethod = HttpMethod.fromString(request.getMethod());
     if (disallowedMethods.contains(httpMethod)) {
-      request.setHandled(true);
-      request.getResponse().setStatus(HttpStatus.METHOD_NOT_ALLOWED_405);
+      Response.writeError(request, response, callback, HttpStatus.METHOD_NOT_ALLOWED_405);
+      return true;
     }
+    return super.handle(request, response, callback);
   }
 }

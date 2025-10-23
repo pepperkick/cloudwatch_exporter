@@ -4,13 +4,13 @@ import io.prometheus.client.hotspot.DefaultExports;
 import io.prometheus.client.servlet.jakarta.exporter.MetricsServlet;
 import java.io.FileReader;
 import java.util.EnumSet;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 public class WebServer {
 
@@ -35,14 +35,16 @@ public class WebServer {
     int port = Integer.parseInt(args[0]);
     Server server = new Server();
     HttpConfiguration httpConfig = new HttpConfiguration();
-    httpConfig.addCustomizer(new DisallowHttpMethods(EnumSet.of(HttpMethod.TRACE)));
     ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
     connector.setPort(port);
     server.addConnector(connector);
 
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
-    server.setHandler(context);
+
+    DisallowHttpMethods disallowHandler = new DisallowHttpMethods(EnumSet.of(HttpMethod.TRACE));
+    disallowHandler.setHandler(context);
+    server.setHandler(disallowHandler);
     context.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
     context.addServlet(new ServletHolder(new DynamicReloadServlet(collector)), "/-/reload");
     context.addServlet(new ServletHolder(new HealthServlet()), "/-/healthy");
